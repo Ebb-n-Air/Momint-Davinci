@@ -87,11 +87,11 @@ router.post(
         getAbortData,
       );
 
-      const { client } = initializeClient(req, endpointOption);
+      const { client } = await initializeClient(req, endpointOption);
 
       let response = await client.sendMessage(text, {
         getIds,
-        debug: false,
+        // debug: true,
         user: req.user.id,
         conversationId,
         parentMessageId,
@@ -135,7 +135,7 @@ router.post(
         conversationId,
         sender: getResponseSender(endpointOption),
         messageId: responseMessageId,
-        parentMessageId: userMessageId,
+        parentMessageId: userMessageId ?? parentMessageId,
       });
     }
   },
