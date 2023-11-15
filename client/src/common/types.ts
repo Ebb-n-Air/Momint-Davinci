@@ -1,4 +1,11 @@
-import type { TConversation, TMessage, TPreset, TMutation } from 'librechat-data-provider';
+import type {
+  TConversation,
+  TMessage,
+  TPreset,
+  TMutation,
+  TLoginUser,
+  TUser,
+} from 'librechat-data-provider';
 
 export type TSetOption = (param: number | string) => (newValue: number | string | boolean) => void;
 export type TSetExample = (
@@ -13,6 +20,19 @@ export enum ESide {
   Bottom = 'bottom',
   Left = 'left',
 }
+
+export enum NotificationSeverity {
+  INFO = 'info',
+  SUCCESS = 'success',
+  WARNING = 'warning',
+  ERROR = 'error',
+}
+
+export type TShowToast = {
+  message: string;
+  severity?: NotificationSeverity;
+  showIcon?: boolean;
+};
 
 export type TBaseSettingsProps = {
   conversation: TConversation | TPreset | null;
@@ -146,3 +166,38 @@ export type TDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
+
+export type TResError = {
+  response: { data: { message: string } };
+  message: string;
+};
+
+export type TAuthContext = {
+  user: TUser | undefined;
+  token: string | undefined;
+  isAuthenticated: boolean;
+  error: string | undefined;
+  login: (data: TLoginUser) => void;
+  logout: () => void;
+};
+
+export type TUserContext = {
+  user?: TUser | undefined;
+  token: string | undefined;
+  isAuthenticated: boolean;
+  redirect?: string;
+};
+
+export type TAuthConfig = {
+  loginRedirect: string;
+  test?: boolean;
+};
+
+export type IconProps = Pick<TMessage, 'isCreatedByUser' | 'model' | 'error'> &
+  Pick<TConversation, 'chatGptLabel' | 'modelLabel' | 'jailbreak'> & {
+    size?: number;
+    button?: boolean;
+    message?: boolean;
+    className?: string;
+    endpoint?: string | null;
+  };

@@ -11,12 +11,14 @@ import * as s from './schemas';
 import * as dataService from './data-service';
 
 export enum QueryKeys {
-  messages = 'messsages',
+  messages = 'messages',
   allConversations = 'allConversations',
   conversation = 'conversation',
   searchEnabled = 'searchEnabled',
   user = 'user',
   name = 'name', // user key name
+  models = 'models',
+  balance = 'balance',
   endpoints = 'endpoints',
   presets = 'presets',
   searchResults = 'searchResults',
@@ -30,8 +32,15 @@ export const useAbortRequestWithMessage = (): UseMutationResult<
   Error,
   { endpoint: string; abortKey: string; message: string }
 > => {
-  return useMutation(({ endpoint, abortKey, message }) =>
-    dataService.abortRequestWithMessage(endpoint, abortKey, message),
+  const queryClient = useQueryClient();
+  return useMutation(
+    ({ endpoint, abortKey, message }) =>
+      dataService.abortRequestWithMessage(endpoint, abortKey, message),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries([QueryKeys.balance]);
+      },
+    },
   );
 };
 
@@ -61,6 +70,17 @@ export const useGetMessagesByConvoId = (
       ...config,
     },
   );
+};
+
+export const useGetUserBalance = (
+  config?: UseQueryOptions<string>,
+): QueryObserverResult<string> => {
+  return useQuery<string>([QueryKeys.balance], () => dataService.getUserBalance(), {
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
+    ...config,
+  });
 };
 
 export const useGetConversationByIdQuery = (
@@ -210,11 +230,29 @@ export const useGetSearchEnabledQuery = (
   });
 };
 
-export const useGetEndpointsQuery = (): QueryObserverResult<t.TEndpointsConfig> => {
-  return useQuery([QueryKeys.endpoints], () => dataService.getAIEndpoints(), {
+export const useGetEndpointsQuery = <TData = t.TEndpointsConfig>(
+  config?: UseQueryOptions<t.TEndpointsConfig, unknown, TData>,
+): QueryObserverResult<TData> => {
+  return useQuery<t.TEndpointsConfig, unknown, TData>(
+    [QueryKeys.endpoints],
+    () => dataService.getAIEndpoints(),
+    {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
+      ...config,
+    },
+  );
+};
+
+export const useGetModelsQuery = (
+  config?: UseQueryOptions<t.TModelsConfig>,
+): QueryObserverResult<t.TModelsConfig> => {
+  return useQuery<t.TModelsConfig>([QueryKeys.models], () => dataService.getModels(), {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
+    ...config,
   });
 };
 
@@ -313,6 +351,9 @@ export const useLoginUserMutation = (): UseMutationResult<
     onSuccess: () => {
       queryClient.invalidateQueries([QueryKeys.user]);
     },
+    onMutate: () => {
+      queryClient.invalidateQueries([QueryKeys.models]);
+    },
   });
 };
 
@@ -345,7 +386,12 @@ export const useRefreshTokenMutation = (): UseMutationResult<
   unknown,
   unknown
 > => {
-  return useMutation(() => dataService.refreshToken(), {});
+  const queryClient = useQueryClient();
+  return useMutation(() => dataService.refreshToken(), {
+    onMutate: () => {
+      queryClient.invalidateQueries([QueryKeys.models]);
+    },
+  });
 };
 
 export const useUserKeyQuery = (

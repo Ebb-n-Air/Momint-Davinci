@@ -1,18 +1,21 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useRecoilState, useSetRecoilState } from 'recoil';
 import { useUpdateConversationMutation } from 'librechat-data-provider';
-import RenameButton from './RenameButton';
+import { useConversations, useConversation } from '~/hooks';
+import { MinimalIcon } from '~/components/Endpoints';
+import { NotificationSeverity } from '~/common';
+import { useToastContext } from '~/Providers';
 import DeleteButton from './DeleteButton';
-import ConvoIcon from '../svg/ConvoIcon';
-
+import RenameButton from './RenameButton';
 import store from '~/store';
 
 export default function Conversation({ conversation, retainView }) {
+  const { showToast } = useToastContext();
   const [currentConversation, setCurrentConversation] = useRecoilState(store.conversation);
   const setSubmission = useSetRecoilState(store.submission);
 
-  const { refreshConversations } = store.useConversations();
-  const { switchToConversation } = store.useConversation();
+  const { refreshConversations } = useConversations();
+  const { switchToConversation } = useConversation();
 
   const updateConvoMutation = useUpdateConversationMutation(currentConversation?.conversationId);
 
@@ -63,21 +66,37 @@ export default function Conversation({ conversation, retainView }) {
     if (titleInput === title) {
       return;
     }
-    updateConvoMutation.mutate({ conversationId, title: titleInput });
+    updateConvoMutation.mutate(
+      { conversationId, title: titleInput },
+      {
+        onSuccess: () => {
+          refreshConversations();
+          if (conversationId == currentConversation?.conversationId) {
+            setCurrentConversation((prevState) => ({
+              ...prevState,
+              title: titleInput,
+            }));
+          }
+        },
+        onError: () => {
+          setTitleInput(title);
+          showToast({
+            message: 'Failed to rename conversation',
+            severity: NotificationSeverity.ERROR,
+            showIcon: true,
+          });
+        },
+      },
+    );
   };
 
-  useEffect(() => {
-    if (updateConvoMutation.isSuccess) {
-      refreshConversations();
-      if (conversationId == currentConversation?.conversationId) {
-        setCurrentConversation((prevState) => ({
-          ...prevState,
-          title: titleInput,
-        }));
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [updateConvoMutation.isSuccess]);
+  const icon = MinimalIcon({
+    size: 20,
+    endpoint: conversation.endpoint,
+    model: conversation.model,
+    error: false,
+    className: 'mr-0',
+  });
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
@@ -97,7 +116,7 @@ export default function Conversation({ conversation, retainView }) {
 
   return (
     <a data-testid="convo-item" onClick={() => clickHandler()} {...aProps}>
-      <ConvoIcon />
+      {icon}
       <div className="relative max-h-5 flex-1 overflow-hidden text-ellipsis break-all">
         {renaming === true ? (
           <input

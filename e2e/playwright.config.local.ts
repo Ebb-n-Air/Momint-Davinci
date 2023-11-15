@@ -9,12 +9,15 @@ const config: PlaywrightTestConfig = {
   ...mainConfig,
   retries: 0,
   globalSetup: require.resolve('./setup/global-setup.local'),
+  globalTeardown: require.resolve('./setup/global-teardown.local'),
   webServer: {
     ...mainConfig.webServer,
     command: `node ${absolutePath}`,
     env: {
       ...process.env,
-      NODE_ENV: 'development',
+      SEARCH: 'false',
+      NODE_ENV: 'CI',
+      TITLE_CONVO: 'false',
       SESSION_EXPIRY: '60000',
       REFRESH_TOKEN_EXPIRY: '300000',
     },

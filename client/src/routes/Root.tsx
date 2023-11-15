@@ -3,16 +3,18 @@ import { useEffect, useState } from 'react';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import { Outlet } from 'react-router-dom';
 import {
-  useGetEndpointsQuery,
+  useGetModelsQuery,
   useGetPresetsQuery,
   useGetSearchEnabledQuery,
 } from 'librechat-data-provider';
 
 import { Nav, MobileNav } from '~/components/Nav';
-import { useAuthContext, useServerStream } from '~/hooks';
+import { useAuthContext, useServerStream, useConversation } from '~/hooks';
 import store from '~/store';
 
 export default function Root() {
+  const { newConversation } = useConversation();
+  const { user, isAuthenticated } = useAuthContext();
   const [navVisible, setNavVisible] = useState(() => {
     const savedNavVisible = localStorage.getItem('navVisible');
     return savedNavVisible !== null ? JSON.parse(savedNavVisible) : false;
@@ -21,13 +23,12 @@ export default function Root() {
   const submission = useRecoilValue(store.submission);
   useServerStream(submission ?? null);
 
-  const setIsSearchEnabled = useSetRecoilState(store.isSearchEnabled);
-  const setEndpointsConfig = useSetRecoilState(store.endpointsConfig);
   const setPresets = useSetRecoilState(store.presets);
-  const { user, isAuthenticated } = useAuthContext();
+  const setIsSearchEnabled = useSetRecoilState(store.isSearchEnabled);
+  const setModelsConfig = useSetRecoilState(store.modelsConfig);
 
-  const searchEnabledQuery = useGetSearchEnabledQuery();
-  const endpointsQuery = useGetEndpointsQuery();
+  const searchEnabledQuery = useGetSearchEnabledQuery({ enabled: isAuthenticated });
+  const modelsQuery = useGetModelsQuery({ enabled: isAuthenticated });
   const presetsQuery = useGetPresetsQuery({ enabled: !!user });
 
   useEffect(() => {
@@ -35,12 +36,14 @@ export default function Root() {
   }, [navVisible]);
 
   useEffect(() => {
-    if (endpointsQuery.data) {
-      setEndpointsConfig(endpointsQuery.data);
-    } else if (endpointsQuery.isError) {
-      console.error('Failed to get endpoints', endpointsQuery.error);
+    if (modelsQuery.data) {
+      setModelsConfig(modelsQuery.data);
+      // Note: passing modelsQuery.data prevents navigation
+      newConversation({}, undefined, modelsQuery.data);
+    } else if (modelsQuery.isError) {
+      console.error('Failed to get models', modelsQuery.error);
     }
-  }, [endpointsQuery.data, endpointsQuery.isError]);
+  }, [modelsQuery.data, modelsQuery.isError]);
 
   useEffect(() => {
     if (presetsQuery.data) {
